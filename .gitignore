@@ -2,3 +2,7 @@ DataExploration/.ipynb_checkpoints/
 data/NetflixPrize/**.txt
 
 **/**.zip
+
+data/MovieLens25M/**.csv
+.DS_Store
+wget-log
