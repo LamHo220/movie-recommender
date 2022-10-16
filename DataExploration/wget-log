@@ -1,17 +1,0 @@
---2022-10-16 02:15:55--  https://docs.google.com/uc?export=download&id=1j6gwSxbeOBULLdKbVVBw0QbRHAO_JXLv
-Resolving docs.google.com (docs.google.com)... 216.58.200.238
-Connecting to docs.google.com (docs.google.com)|216.58.200.238|:443... connected.
-HTTP request sent, awaiting response... 303 See Other
-Location: https://doc-0c-4c-docs.googleusercontent.com/docs/securesc/ha0ro937gcuc7l7deffksulhg5h7mbp1/7h0flqfgn21ddv4edfpdbp634jboct9d/1665857700000/17238539596940499087/*/1j6gwSxbeOBULLdKbVVBw0QbRHAO_JXLv?e=download&uuid=0c1a0ccf-0f20-4381-8cf2-b9451e2a7d27 [following]
-Warning: wildcards not supported in HTTP.
---2022-10-16 02:15:56--  https://doc-0c-4c-docs.googleusercontent.com/docs/securesc/ha0ro937gcuc7l7deffksulhg5h7mbp1/7h0flqfgn21ddv4edfpdbp634jboct9d/1665857700000/17238539596940499087/*/1j6gwSxbeOBULLdKbVVBw0QbRHAO_JXLv?e=download&uuid=0c1a0ccf-0f20-4381-8cf2-b9451e2a7d27
-Resolving doc-0c-4c-docs.googleusercontent.com (doc-0c-4c-docs.googleusercontent.com)... 142.250.66.129
-Connecting to doc-0c-4c-docs.googleusercontent.com (doc-0c-4c-docs.googleusercontent.com)|142.250.66.129|:443... connected.
-HTTP request sent, awaiting response... 200 OK
-Length: 3038099 (2.9M) [text/csv]
-Saving to: '../data/MovieLens25M/movies.csv'
-
-     ../data/MovieL  64%[===========>        ]   1.88M  1.66MB/s               ../data/MovieLens25 100%[===================>]   2.90M  2.34MB/s    in 1.2s    
-
-2022-10-16 02:15:58 (2.34 MB/s) - '../data/MovieLens25M/movies.csv' saved [3038099/3038099]
-
