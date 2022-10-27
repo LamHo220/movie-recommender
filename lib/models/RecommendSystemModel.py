@@ -39,7 +39,7 @@ class RecommendSystemModel(ABC):
 
     # @abstractmethod
     def learn_to_recommend(self, 
-        data: Any,
+        
         features: int = 10,
         lr: float = 0.0002,
         epochs: int = 101,
@@ -49,7 +49,6 @@ class RecommendSystemModel(ABC):
         """ A method for model to learn to recommend
 
         Args:
-            data (Any): Every evaluation
             features (int, optional): Number of latent variables. Defaults to 10.
             lr (float, optional): Rate for gradient descent. Defaults to 0.0002.
             epochs (int, optional): Number of iterations or maximum loops to perform. Defaults to 101.
