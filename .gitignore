@@ -9,3 +9,4 @@ data/MovieLens25M/**.csv
 wget-log
 
 /.vscode/
+**/__pycache__/

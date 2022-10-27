@@ -20,8 +20,8 @@ class RecommendSystemModel(ABC):
 
         pass
 
-    @abstractmethod
-    def split(self, ratio: float, tensor: bool = False) -> List[NDArray, NDArray]:
+    # @abstractmethod
+    def split(self, ratio: float, tensor: bool = False) -> List[NDArray]:
         """_summary_
 
         Args:
@@ -29,15 +29,15 @@ class RecommendSystemModel(ABC):
             tensor (bool, optional): It is a tensor or not. Defaults to False.
 
         Returns:
-            List[NDArray, NDArray]: [training, valid] Training data and valid data in a list
+            List[NDArray]: [training, valid] Training data and valid data in a list
         """
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def data_loader(self) -> None:
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def learn_to_recommend(self, 
         data: Any,
         features: int = 10,
@@ -65,7 +65,7 @@ class RecommendSystemModel(ABC):
         """
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def prediction(self, P: NDArray, Q: NDArray, u: int, i: int) -> float:
         """ Calculate the prediction
 
@@ -80,7 +80,7 @@ class RecommendSystemModel(ABC):
         """
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def loss(self, data: Any, P: NDArray, Q: NDArray) -> float:
         """ Calculate the loss
 
@@ -94,7 +94,7 @@ class RecommendSystemModel(ABC):
         """
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def svd(self):
         pass
     

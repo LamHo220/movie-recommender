@@ -1,2 +1,2 @@
-from decorator import *
-from utils import *
+from .decorator import *
+from .utils import *

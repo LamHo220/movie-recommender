@@ -1,1 +1,1 @@
-from RecommendSystemModel import *
+from .RecommendSystemModel import RecommendSystemModel
