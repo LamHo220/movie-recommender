@@ -21,16 +21,7 @@ class RecommendSystemModel(ABC):
         pass
 
     # @abstractmethod
-    def split(self, ratio: float, tensor: bool = False) -> List[NDArray]:
-        """_summary_
-
-        Args:
-            ratio (float): How many training data and valid data are loaded
-            tensor (bool, optional): It is a tensor or not. Defaults to False.
-
-        Returns:
-            List[NDArray]: [training, valid] Training data and valid data in a list
-        """
+    def split(self, ratio: float, tensor: bool = False):
         pass
 
     # @abstractmethod
@@ -46,55 +37,14 @@ class RecommendSystemModel(ABC):
         weight_decay: float = 0.02,
         stopping: float = 0.001,
     ) -> Tuple[NDArray, NDArray, float, float]:
-        """ A method for model to learn to recommend
-
-        Args:
-            features (int, optional): Number of latent variables. Defaults to 10.
-            lr (float, optional): Rate for gradient descent. Defaults to 0.0002.
-            epochs (int, optional): Number of iterations or maximum loops to perform. Defaults to 101.
-            weight_decay (float, optional): L2 regularization to predict rattings different of 0. Defaults to 0.02.
-            stopping (float, optional): Scalar associated with the stopping criterion. Defaults to 0.001.
-
-        Returns:
-            Tuple[NDArray, NDArray, float, float]: (P, Q, loss_train, loss_valid)
-                P: latent matrix of users
-                Q: latent matrix of items
-                loss_train: vector of the different values of the loss function after each iteration on the train
-                loss_valid: vector of the different values of the loss function after each iteration not on valid
-        """
         pass
 
     # @abstractmethod
-    def prediction(self, P: NDArray, Q: NDArray, u: int, i: int) -> float:
-        """ Calculate the prediction
-
-        Args:
-            P (NDArray): user matrix
-            Q (NDArray): matrix of items
-            u (int): index associated with user u
-            i (int): index associated with item i
-
-        Returns:
-            float: the predicted evaluation of the user u for the item i
-        """
+    def prediction(self, u: int, i: int) -> float:
         pass
 
     # @abstractmethod
-    def loss(self, data: Any, P: NDArray, Q: NDArray) -> float:
-        """ Calculate the loss
-
-        Args:
-            data (Any): ratings
-            P (NDArray): matrix of users
-            Q (NDArray): matrix of items
-
-        Returns:
-            float: mean of squared errors
-        """
+    def loss(self, P: NDArray, Q: NDArray) -> float:
         pass
 
-    # @abstractmethod
-    def svd(self):
-        pass
-    
     
