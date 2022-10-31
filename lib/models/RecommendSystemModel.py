@@ -14,6 +14,7 @@ class RecommendSystemModel(ABC):
 
         self.valid = None
         self.train = None
+        self.test = None
 
         self.n_users = None
         self.n_items = None
