@@ -20,6 +20,33 @@ class RecommendSystemModel(ABC):
         stopping: float = None,
         momentum: float = None,
     ) -> None:
+        # Data frame
+        self.data: pd.DataFrame
+        # # Training data
+        self.train: NDArray
+        # # Validating Data
+        self.valid: NDArray
+        self.test: NDArray
+        # SVD mode
+        self.mode: str = mode or "funk"
+        # Number of features
+        self.features: int = features or 5
+        # Learning rate
+        self.lr: float = lr or 0.01
+        # Number of total epochs
+        self.epochs: int = epochs or 101
+        # the weight decay
+        self.weight_decay: float = weight_decay or 0.02
+        self.stopping: float = stopping or 0.001
+        self.momentum: float = momentum or 0.0
+        # Tensor SGD optimizer
+        # self.optimizer = tf.keras.optimizers.SGD(learning_rate=self.lr, momentum=self.momentum,)
+
+
+        # User latent matrix
+        self._P: NDArray  # = np.random.rand(self.n_users, features) * 0.1
+        # Item latent matrix
+        self._Q: NDArray  # = np.random.rand(self.n_items, features) * 0.1
         pass
     
     # @abstractmethod
