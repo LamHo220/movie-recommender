@@ -92,14 +92,14 @@ class SVDModel(RecommendSystemModel):
                     ' | Valid :', "{:3.3f}".format(validLoss))
                     break
         return loss_train, loss_valid, errors
+    
     def convertToUserItemMatrix(self, data, n_users, n_movies):
         data = np.array(data,dtype=int)
         userItemMatrix = np.zeros((n_users, n_movies))
-        for id_user in range(1, n_users + 1):
-            id_movies = data[:, 1][data[:, 0] == id_user]
-            id_ratings = data[:, 2][data[:, 0] == id_user]
-            userItemMatrix[id_user-1,id_movies - 1] = id_ratings
+        for row in data:
+            userItemMatrix[row[0]-1,row[1]-1] = row[2]
         return userItemMatrix
+    
     def prediction(self, u: int, i: int) -> float:
         # Woody
         # print(P[u: ])
