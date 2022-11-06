@@ -34,10 +34,10 @@ class SVDModel(RecommendSystemModel):
 
         trainBeforeSplit = np.zeros(
             (len(userItemMatrix), len(userItemMatrix[0]))
-        ).tolist()
-        self.train = np.zeros((len(userItemMatrix), len(userItemMatrix[0]))).tolist()
-        self.valid = np.zeros((len(userItemMatrix), len(userItemMatrix[0]))).tolist()
-        self.test = np.zeros((len(userItemMatrix), len(userItemMatrix[0]))).tolist()
+        )
+        self.train = np.zeros((len(userItemMatrix), len(userItemMatrix[0])))
+        self.valid = np.zeros((len(userItemMatrix), len(userItemMatrix[0])))
+        self.test = np.zeros((len(userItemMatrix), len(userItemMatrix[0])))
 
         for i in range(len(userItemMatrix)):
             for j in range(len(userItemMatrix[i])):
@@ -129,11 +129,10 @@ class SVDModel(RecommendSystemModel):
         return loss_train, loss_valid, errors
 
     def convertToUserItemMatrix(
-        self, data: NDArray, n_users: int, n_movies: int
+        self, data: pd.DataFrame, n_users: int, n_movies: int
     ) -> None:
-        data = np.array(data, dtype=np.int64)
         userItemMatrix = np.zeros((n_users, n_movies))
-        for row in data:
+        for _, row in data.iterrows():
             userItemMatrix[row[0] - 1, row[1] - 1] = row[2]
         return userItemMatrix
 
