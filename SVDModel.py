@@ -28,32 +28,31 @@ class SVDModel(RecommendSystemModel):
     def split(
         self, ratio_train_test: float, ratio_train_valid: float, tensor: bool = False
     ) -> None:
-        userItemMatrix = self.convertToUserItemMatrix(
-            self.data, self.n_users, self.n_items
-        )
+        userItemMatrix = self.data[['userId','movieId','rating']].pivot_table(columns='movieId', index='userId', values='rating').fillna(0)
+        
+        n = len(userItemMatrix)
+        m = len(userItemMatrix.columns)
 
-        trainBeforeSplit = np.zeros(
-            (len(userItemMatrix), len(userItemMatrix[0]))
-        )
-        self.train = np.zeros((len(userItemMatrix), len(userItemMatrix[0])))
-        self.valid = np.zeros((len(userItemMatrix), len(userItemMatrix[0])))
-        self.test = np.zeros((len(userItemMatrix), len(userItemMatrix[0])))
+        trainBeforeSplit = userItemMatrix.copy().apply(lambda x: pd.Series(map(lambda y:0,x)))
+        self.train = trainBeforeSplit.copy()
+        self.valid = trainBeforeSplit.copy()
+        self.test = trainBeforeSplit.copy()
 
-        for i in range(len(userItemMatrix)):
-            for j in range(len(userItemMatrix[i])):
-                if userItemMatrix[i][j]:
+        for i in range(n):
+            for j in range(m):
+                if userItemMatrix.iloc[i,j]:
                     if np.random.binomial(1, ratio_train_test, 1):
-                        trainBeforeSplit[i][j] = userItemMatrix[i][j]
+                        trainBeforeSplit.iloc[i,j] = userItemMatrix.iloc[i,j]
                     else:
-                        self.test[i][j] = userItemMatrix[i][j]
+                        self.test.iloc[i,j] = userItemMatrix.iloc[i,j]
 
-        for i in range(len(trainBeforeSplit)):
-            for j in range(len(trainBeforeSplit[i])):
-                if trainBeforeSplit[i][j]:
+        for i in range(n):
+            for j in range(m):
+                if trainBeforeSplit.iloc[i,j]:
                     if np.random.binomial(1, ratio_train_valid, 1):
-                        self.train[i][j] = trainBeforeSplit[i][j]
+                        self.train.iloc[i,j] = trainBeforeSplit.iloc[i,j]
                     else:
-                        self.valid[i][j] = trainBeforeSplit[i][j]
+                        self.valid.iloc[i,j] = trainBeforeSplit.iloc[i,j]
 
     def data_loader(
         self,
@@ -72,8 +71,10 @@ class SVDModel(RecommendSystemModel):
             )
         elif not path:
             self.data = data
-        self.n_users = n_users
-        self.n_items = n_items
+        self.users = self.data['userId'].unique()
+        self.movies = self.data['movieId'].unique()
+        self.n_users = len(self.users)
+        self.n_items = len(self.movies)
 
     def training(self) -> Tuple[NDArray, NDArray, float, float]:
         loss_train = []
@@ -90,13 +91,13 @@ class SVDModel(RecommendSystemModel):
 
         # Johnny
         for e in range(self.epochs):
-            for id_user in range(self.n_users):
-                for id_item in range(self.n_items):
-                    if self.train[id_user][id_item] > 0:
+            for id_user, user in enumerate(self.users):
+                for id_item, movie in enumerate(self.movies):
+                    if self.train.iloc[user, movie] > 0:
 
                         predict = self.prediction(id_user, id_item)
 
-                        error = self.train[id_user][id_item] - predict
+                        error = self.train.iloc[user, movie] - predict
                         errors.append(error)
 
                         self.optimize(error, id_user, id_item)
@@ -128,13 +129,6 @@ class SVDModel(RecommendSystemModel):
         )
         return loss_train, loss_valid, errors
 
-    def convertToUserItemMatrix(
-        self, data: pd.DataFrame, n_users: int, n_movies: int
-    ) -> None:
-        userItemMatrix = np.zeros((n_users, n_movies))
-        for _, row in data.iterrows():
-            userItemMatrix[row[0] - 1, row[1] - 1] = row[2]
-        return userItemMatrix
 
     def prediction(self, u: int, i: int) -> float:
         # Woody
@@ -143,15 +137,15 @@ class SVDModel(RecommendSystemModel):
             predict += self._mean + self._bu[u] + self._bi[i]
         return predict
 
-    def loss(self, groundTruthData: NDArray) -> float:
+    def loss(self, groundTruthData) -> float:
         # Woody
         squaredErrors = 0.0
         numOfPrediction = 0
-        for u in range(self.n_users):
-            for i in range(self.n_items):
-                if groundTruthData[u][i] > 0:
+        for u,user in enumerate(self.users):
+            for i,movie in enumerate(self.movies):
+                if groundTruthData.iloc[user,movie] > 0:
                     squaredErrors += pow(
-                        groundTruthData[u][i] - self.prediction(u, i), 2
+                        groundTruthData.iloc[user,movie] - self.prediction(u, i), 2
                     )
                     numOfPrediction += 1
         return squaredErrors / numOfPrediction
