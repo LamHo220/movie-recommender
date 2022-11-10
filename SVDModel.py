@@ -36,12 +36,13 @@ class SVDModel(RecommendSystemModel):
             .fillna(0)
         )
 
-        for label in range(1, self.n_items+1):
-            if label not in userItemMatrix.columns:
-                userItemMatrix[label] = 0
+        # for label in range(1, self.n_items+1):
+        #     if label not in userItemMatrix.columns:
+        #         userItemMatrix[label] = 0
         userItemMatrix = userItemMatrix[sorted(userItemMatrix.columns)].to_numpy(dtype=np.float16)
         print(f"User Item Matrix Shape: {userItemMatrix.shape}")
         print(f"User Reference length: {self.n_users}")
+        self.n_items = len(userItemMatrix[0])
         print(f"Item Reference length: {self.n_items}")
 
         n = len(userItemMatrix)
@@ -96,18 +97,16 @@ class SVDModel(RecommendSystemModel):
         error = self.train[id_user, id_item] - predict
         self.optimize(error, id_user, id_item)
         return error
-            
-    def _run(self,id_user, id_item):
-        self._process(id_user,id_item)
+        
         
     def _train_one_epochs(self):
         errors = []
         for id_user in range(self.n_users):
             for id_item in range(self.n_items):
                 if self.train[id_user, id_item] > 0:
-                    error = self._run(id_user, id_item) 
+                    error = self._process(id_user, id_item) 
                     errors.append(error)
-        return errors
+        return sum(errors)
 
     def training(self) -> Tuple[NDArray, NDArray, float, float]:
         loss_train = []
@@ -126,7 +125,7 @@ class SVDModel(RecommendSystemModel):
         tic = time.perf_counter()
         for e in range(self.epochs):
             _errors = self._train_one_epochs()
-            errors += _errors
+            errors.append(_errors)
             
             trainLoss = self.loss(self.train)
             validLoss = self.loss(self.valid)
