@@ -117,8 +117,8 @@ class SVDModel(RecommendSystemModel):
         self.mean = 0  # TODO calculate the mean of rating
 
         # Johnny
+        tic = time.perf_counter()
         for e in range(self.epochs):
-            tic = time.perf_counter()
             _errors = self._train_one_epoches()
             errors += _errors
             
@@ -128,7 +128,7 @@ class SVDModel(RecommendSystemModel):
             loss_valid.append(validLoss)
             
             if e % 10 == 0:
-                
+                toc = time.perf_counter()
                 print(
                     "Epoch : ",
                     "{:3.0f}".format(e + 1),
@@ -136,7 +136,7 @@ class SVDModel(RecommendSystemModel):
                     "{:3.3f}".format(trainLoss),
                     " | Valid :",
                     "{:3.3f}".format(validLoss),
-                    " | Time :", "{:3.0f}".format(time.perf_counter()-toc)
+                    " | Time :", "{:3.0f}s".format(toc-tic)
                 )
                 tic = time.perf_counter()
 
