@@ -36,10 +36,10 @@ class SVDModel(RecommendSystemModel):
             .fillna(0)
         )
 
-        for label in range(1, self.n_items):
+        for label in range(1, self.n_items+1):
             if label not in userItemMatrix.columns:
                 userItemMatrix[label] = 0
-        userItemMatrix = userItemMatrix[sorted(userItemMatrix.columns)].to_numpy()
+        userItemMatrix = userItemMatrix[sorted(userItemMatrix.columns)].to_numpy(dtype=np.float16)
         print(f"User Item Matrix Shape: {userItemMatrix.shape}")
         print(f"User Reference length: {self.n_users}")
         print(f"Item Reference length: {self.n_items}")
@@ -100,8 +100,14 @@ class SVDModel(RecommendSystemModel):
     def _run(self,id_user, id_item):
         self._process(id_user,id_item)
         
-    def _train_one_epoches(self):
-        return [self._run(id_user, id_item) for id_user in range(self.n_users) for id_item in range(self.n_items) if self.train[id_user, id_item] > 0]
+    def _train_one_epochs(self):
+        errors = []
+        for id_user in range(self.n_users):
+            for id_item in range(self.n_items):
+                if self.train[id_user, id_item] > 0:
+                    error = self._run(id_user, id_item) 
+                    errors.append(error)
+        return errors
 
     def training(self) -> Tuple[NDArray, NDArray, float, float]:
         loss_train = []
@@ -119,7 +125,7 @@ class SVDModel(RecommendSystemModel):
         # Johnny
         tic = time.perf_counter()
         for e in range(self.epochs):
-            _errors = self._train_one_epoches()
+            _errors = self._train_one_epochs()
             errors += _errors
             
             trainLoss = self.loss(self.train)
@@ -152,6 +158,9 @@ class SVDModel(RecommendSystemModel):
             " | Valid :",
             "{:3.3f}".format(validLoss),
         )
+        self.loss_train = loss_train
+        self.loss_valid = loss_valid
+        self.errors = errors
         return loss_train, loss_valid, errors
 
     def prediction(self, u: int, i: int) -> float:
