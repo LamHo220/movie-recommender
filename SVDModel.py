@@ -10,6 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from joblib import Parallel, delayed
+import time
 
 # The ML model
 class SVDModel(RecommendSystemModel):
@@ -28,7 +30,6 @@ class SVDModel(RecommendSystemModel):
     def split(
         self, ratio_train_test: float, ratio_train_valid: float, tensor: bool = False
     ) -> None:
-
         userItemMatrix = (
             self.data[["userId", "movieId", "rating"]]
             .pivot_table(columns="movieId", index="userId", values="rating")
@@ -56,17 +57,12 @@ class SVDModel(RecommendSystemModel):
             for j in range(m):
                 if userItemMatrix[i, j]:
                     if np.random.binomial(1, ratio_train_test, 1):
-                        trainBeforeSplit[i, j] = userItemMatrix[i, j]
+                        if np.random.binomial(1, ratio_train_valid, 1):
+                            self.train[i, j] = userItemMatrix[i, j]
+                        else:
+                            self.valid[i, j] = userItemMatrix[i, j]
                     else:
                         self.test[i, j] = userItemMatrix[i, j]
-
-        for i in range(n):
-            for j in range(m):
-                if trainBeforeSplit[i, j]:
-                    if np.random.binomial(1, ratio_train_valid, 1):
-                        self.train[i, j] = trainBeforeSplit[i, j]
-                    else:
-                        self.valid[i, j] = trainBeforeSplit[i, j]
 
     def data_loader(
         self,
@@ -94,6 +90,18 @@ class SVDModel(RecommendSystemModel):
 
         self.n_users = len(self.users_ref)
         self.n_items = n_items
+        
+    def _process(self,id_user,id_item):
+        predict = self.prediction(id_user, id_item)
+        error = self.train[id_user, id_item] - predict
+        self.optimize(error, id_user, id_item)
+        return error
+            
+    def _run(self,id_user, id_item):
+        self._process(id_user,id_item)
+        
+    def _train_one_epoches(self):
+        return [self._run(id_user, id_item) for id_user in range(self.n_users) for id_item in range(self.n_items) if self.train[id_user, id_item] > 0]
 
     def training(self) -> Tuple[NDArray, NDArray, float, float]:
         loss_train = []
@@ -110,21 +118,17 @@ class SVDModel(RecommendSystemModel):
 
         # Johnny
         for e in range(self.epochs):
-            for id_user in range(self.n_users):
-                for id_item in range(self.n_items):
-                    if self.train[id_user, id_item] > 0:
-
-                        predict = self.prediction(id_user, id_item)
-
-                        error = self.train[id_user, id_item] - predict
-                        errors.append(error)
-
-                        self.optimize(error, id_user, id_item)
+            tic = time.perf_counter()
+            _errors = self._train_one_epoches()
+            errors += _errors
+            
             trainLoss = self.loss(self.train)
             validLoss = self.loss(self.valid)
             loss_train.append(trainLoss)
             loss_valid.append(validLoss)
+            
             if e % 10 == 0:
+                
                 print(
                     "Epoch : ",
                     "{:3.0f}".format(e + 1),
@@ -132,7 +136,9 @@ class SVDModel(RecommendSystemModel):
                     "{:3.3f}".format(trainLoss),
                     " | Valid :",
                     "{:3.3f}".format(validLoss),
+                    " | Time :", "{:3.0f}".format(time.perf_counter()-toc)
                 )
+                tic = time.perf_counter()
 
             if e > 1:
                 if abs(validLoss - trainLoss) < self.stopping:
