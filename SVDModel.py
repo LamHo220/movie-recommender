@@ -36,25 +36,24 @@ class SVDModel(RecommendSystemModel):
             .fillna(0)
         )
 
-        for label in range(1, self.n_items+1):
-            if label not in userItemMatrix.columns:
-                userItemMatrix[label] = 0
-        userItemMatrix = userItemMatrix[sorted(userItemMatrix.columns)].to_numpy(dtype=np.float16)
+#         for label in range(1, self.n_items):
+#             if label not in userItemMatrix.columns:
+#                 userItemMatrix[label] = 0
+#         userItemMatrix = userItemMatrix[sorted(userItemMatrix.columns)].to_numpy()
+        userItemMatrix = userItemMatrix.to_numpy()
         print(f"User Item Matrix Shape: {userItemMatrix.shape}")
         print(f"User Reference length: {self.n_users}")
         print(f"Item Reference length: {self.n_items}")
 
-        n = len(userItemMatrix)
-        m = len(userItemMatrix[0])
-
         trainBeforeSplit = userItemMatrix.copy()
         trainBeforeSplit.fill(0)
+        
         self.train = trainBeforeSplit.copy()
         self.valid = trainBeforeSplit.copy()
         self.test = trainBeforeSplit.copy()
 
-        for i in range(n):
-            for j in range(m):
+        for i in range(self.n_users):
+            for j in range(self.n_items):
                 if userItemMatrix[i, j]:
                     if np.random.binomial(1, ratio_train_test, 1):
                         if np.random.binomial(1, ratio_train_valid, 1):
@@ -89,7 +88,7 @@ class SVDModel(RecommendSystemModel):
         self.movies_ref.sort()
 
         self.n_users = len(self.users_ref)
-        self.n_items = n_items
+        self.n_items = len(self.movies_ref)
         
     def _process(self,id_user,id_item):
         predict = self.prediction(id_user, id_item)
@@ -100,14 +99,8 @@ class SVDModel(RecommendSystemModel):
     def _run(self,id_user, id_item):
         self._process(id_user,id_item)
         
-    def _train_one_epochs(self):
-        errors = []
-        for id_user in range(self.n_users):
-            for id_item in range(self.n_items):
-                if self.train[id_user, id_item] > 0:
-                    error = self._run(id_user, id_item) 
-                    errors.append(error)
-        return errors
+    def _train_one_epoches(self):
+        return [self._run(id_user, id_item) for id_user in range(self.n_users) for id_item in range(self.n_items) if self.train[id_user, id_item] > 0]
 
     def training(self) -> Tuple[NDArray, NDArray, float, float]:
         loss_train = []
@@ -125,7 +118,7 @@ class SVDModel(RecommendSystemModel):
         # Johnny
         tic = time.perf_counter()
         for e in range(self.epochs):
-            _errors = self._train_one_epochs()
+            _errors = self._train_one_epoches()
             errors += _errors
             
             trainLoss = self.loss(self.train)
@@ -158,9 +151,6 @@ class SVDModel(RecommendSystemModel):
             " | Valid :",
             "{:3.3f}".format(validLoss),
         )
-        self.loss_train = loss_train
-        self.loss_valid = loss_valid
-        self.errors = errors
         return loss_train, loss_valid, errors
 
     def prediction(self, u: int, i: int) -> float:
