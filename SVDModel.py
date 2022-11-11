@@ -135,7 +135,7 @@ class SVDModel(RecommendSystemModel):
                     "{:3.3f}".format(trainLoss),
                     " | Valid :",
                     "{:3.3f}".format(validLoss),
-                    " | Time :", "{:3.0f}s".format(toc-tic)
+                    " | Time :", "{:3.5f}s".format(toc-tic)
                 )
                 tic = time.perf_counter()
 
@@ -171,7 +171,7 @@ class SVDModel(RecommendSystemModel):
                         groundTruthData[u, i] - self.prediction(u, i), 2
                     )
                     numOfPrediction += 1
-        return squaredErrors / numOfPrediction
+        return 0 if numOfPrediction==0 else squaredErrors / numOfPrediction
 
     def optimize(self, error: float, id_user: int, id_item: int):
         # Johnny
