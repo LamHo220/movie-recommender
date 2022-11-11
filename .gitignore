@@ -10,3 +10,5 @@ wget-log
 
 /.vscode/
 **/__pycache__/
+
+**/*.pkl

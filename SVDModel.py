@@ -97,7 +97,7 @@ class SVDModel(RecommendSystemModel):
         return error
             
     def _run(self,id_user, id_item):
-        self._process(id_user,id_item)
+        return self._process(id_user,id_item)
         
     def _train_one_epoches(self):
         return [self._run(id_user, id_item) for id_user in range(self.n_users) for id_item in range(self.n_items) if self.train[id_user, id_item] > 0]
