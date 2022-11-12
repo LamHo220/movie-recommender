@@ -97,7 +97,11 @@ class SVDModel(RecommendSystemModel):
         return error
             
     def _run(self,id_user, id_item):
-        return self._process(id_user,id_item)
+        error = self._process(id_user, id_item)
+        if self.mode=='svd++':
+            self._bu[id_user] += self.lr * (error - self.weight_decay * self._bu[id_user])
+            self._bi[id_item] += self.lr * (error - self.weight_decay * self._bi[id_item])
+        return error
         
     def _train_one_epoches(self):
         return [self._run(id_user, id_item) for id_user in range(self.n_users) for id_item in range(self.n_items) if self.train[id_user, id_item] > 0]
@@ -109,12 +113,12 @@ class SVDModel(RecommendSystemModel):
 
         self._P = np.random.rand(self.n_users, self.features) * 0.1
         self._Q = np.random.rand(self.n_items, self.features) * 0.1
-
-        # for advanced SVD
-        self._bu = np.zeros(self.n_users)
-        self._bi = np.zeros(self.n_items)
-        self.mean = 0  # TODO calculate the mean of rating
-
+           
+        if self.mode=='svd++':
+            # for advanced SVD
+            self._bu = np.zeros(self.n_users)
+            self._bi = np.zeros(self.n_items)
+            self._mean = np.mean(self.data['rating'])  # TODO calculate the mean of rating
         # Johnny
         tic = time.perf_counter()
         for e in range(self.epochs):
