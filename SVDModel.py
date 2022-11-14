@@ -34,10 +34,6 @@ class SVDModel(RecommendSystemModel):
             .fillna(0)
         )
 
-        #         for label in range(1, self.n_items):
-        #             if label not in userItemMatrix.columns:
-        #                 userItemMatrix[label] = 0
-        #         userItemMatrix = userItemMatrix[sorted(userItemMatrix.columns)].to_numpy()
         userItemMatrix = userItemMatrix.to_numpy()
         print(f"User Item Matrix Shape: {userItemMatrix.shape}")
         print(f"User Reference length: {self.n_users}")
@@ -88,24 +84,8 @@ class SVDModel(RecommendSystemModel):
         self.n_users = len(self.users_ref)
         self.n_items = len(self.movies_ref)
 
-    # def _process(self, id_user, id_item):
-    #     predict = self.prediction(id_user, id_item)
-    #     error = self.train[id_user, id_item] - predict
-    #     self.optimize(error, id_user, id_item)
-    #     return error
-
-    # def _run(id_user, id_item):
-    #     error = self._process(id_user, id_item)
-    #     if self.mode == "svd++":
-    #         self._bu[id_user] += self.lr * (
-    #             error - self.weight_decay * self._bu[id_user]
-    #         )
-    #         self._bi[id_item] += self.lr * (
-    #             error - self.weight_decay * self._bi[id_item]
-    #         )
-    #     return error
-    def _train_one_epochs(self):
-        return _train(
+    def train_one_epoch(self):
+        return _train_one_epoch(
             self.n_users,
             self.n_items,
             self.train,
@@ -137,7 +117,7 @@ class SVDModel(RecommendSystemModel):
         # Johnny
         tic = time.perf_counter()
         for e in range(self.epochs):
-            error = self._train_one_epochs()
+            error = self.train_one_epoch()
             errors.append(error)
 
             trainLoss = self.loss(self.train)
@@ -175,45 +155,43 @@ class SVDModel(RecommendSystemModel):
 
     def prediction(self, u: int, i: int) -> float:
         # Woody
-        predict = np.dot(self._P[u, :], self._Q[i, :])
-        if self.mode == "svd++":
-            predict += self._mean + self._bu[u] + self._bi[i]
-        return predict
+        return _prediction(
+            self.id_user,
+            self.id_item,
+            self._P,
+            self._Q,
+            self.mode,
+            self._mean,
+            self._bu,
+            self._bi,
+        )
 
     def loss(self, groundTruthData) -> float:
         # Woody
-        # squaredErrors = 0.0
-        # numOfPrediction = 0
-        # for u in range(self.n_users):
-        #     for i in range(self.n_items):
-        #         if groundTruthData[u, i] > 0:
-        #             squaredErrors += pow(
-        #                 groundTruthData[u, i] - self.prediction(u, i), 2
-        #             )
-        #             numOfPrediction += 1
-        # return 0 if numOfPrediction == 0 else squaredErrors / numOfPrediction
-        return _loss(groundTruthData, self.n_users, self.n_items, self.mode, self._P,self._Q, self._mean, self._bu, self._bi,self.train)
-
-    # def optimize(self, error: float, id_user: int, id_item: int):
-    #     # Johnny
-    #     self._P[id_user, :] += self.lr * (
-    #         error * self._Q[id_item, :] - self.weight_decay * self._P[id_user, :]
-    #     )
-    #     self._Q[id_item, :] += self.lr * (
-    #         error * self._P[id_user, :] - self.weight_decay * self._Q[id_item, :]
-    #     )
+        return _loss(
+            groundTruthData,
+            self.n_users,
+            self.n_items,
+            self.mode,
+            self._P,
+            self._Q,
+            self._mean,
+            self._bu,
+            self._bi,
+            self.train,
+        )
 
 
 @njit(parallel=True, fastmath=True)
-def _train(n_users, n_items, train, _P, _Q, mode, _mean, _bu, _bi, lr, weight_decay):
+def _train_one_epoch(
+    n_users, n_items, train, _P, _Q, mode, _mean, _bu, _bi, lr, weight_decay
+):
     error = 0
     for id_user in prange(n_users):
         for id_item in prange(n_items):
             if train[id_user, id_item] > 0:
-                # predict = np.dot(_P[u, :], _Q[i, :])
-                predict = np.dot(_P[id_user, :], _Q[id_item, :])
-                if mode == "svd++":
-                    predict += _mean + _bu[id_user] + _bi[id_item]
+                # Predict
+                predict = _prediction(id_user, id_item, _P, _Q, mode, _mean, _bu, _bi)
 
                 error = train[id_user, id_item] - predict
 
@@ -233,7 +211,18 @@ def _train(n_users, n_items, train, _P, _Q, mode, _mean, _bu, _bi, lr, weight_de
 
 # Woody
 @njit(parallel=True, fastmath=True)
-def _loss(groundTruthData, n_users, n_items,mode,_P,_Q,_mean,_bu,_bi,train,):
+def _loss(
+    groundTruthData,
+    n_users,
+    n_items,
+    mode,
+    _P,
+    _Q,
+    _mean,
+    _bu,
+    _bi,
+    train,
+):
     squaredErrors = 0.0
     numOfPrediction = 0
     for u in prange(n_users):
@@ -242,8 +231,17 @@ def _loss(groundTruthData, n_users, n_items,mode,_P,_Q,_mean,_bu,_bi,train,):
                 predict = np.dot(_P[u, :], _Q[i, :])
                 if mode == "svd++":
                     predict += _mean + _bu[u] + _bi[i]
-
-                error = train[u, i] - predict
                 squaredErrors += pow(groundTruthData[u, i] - predict, 2)
                 numOfPrediction += 1
     return 0 if numOfPrediction == 0 else squaredErrors / numOfPrediction
+
+
+@njit(parallel=True, fastmath=True)
+def _prediction(u: int, i: int, _P, _Q, mode, _mean, _bu, _bi):
+    # Woody
+    predict = 0
+    for f in prange(len(_P[0])):
+        predict += _P[u, f]* _Q[i, f]
+    if mode == "svd++":
+        predict += _mean + _bu[u] + _bi[i]
+    return predict
