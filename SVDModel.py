@@ -7,11 +7,9 @@ from numpy.typing import NDArray
 import pandas as pd
 import numpy as np
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from joblib import Parallel, delayed
 import time
+
+from numba import njit, prange
 
 # The ML model
 class SVDModel(RecommendSystemModel):
@@ -36,10 +34,10 @@ class SVDModel(RecommendSystemModel):
             .fillna(0)
         )
 
-#         for label in range(1, self.n_items):
-#             if label not in userItemMatrix.columns:
-#                 userItemMatrix[label] = 0
-#         userItemMatrix = userItemMatrix[sorted(userItemMatrix.columns)].to_numpy()
+        #         for label in range(1, self.n_items):
+        #             if label not in userItemMatrix.columns:
+        #                 userItemMatrix[label] = 0
+        #         userItemMatrix = userItemMatrix[sorted(userItemMatrix.columns)].to_numpy()
         userItemMatrix = userItemMatrix.to_numpy()
         print(f"User Item Matrix Shape: {userItemMatrix.shape}")
         print(f"User Reference length: {self.n_users}")
@@ -47,7 +45,7 @@ class SVDModel(RecommendSystemModel):
 
         trainBeforeSplit = userItemMatrix.copy()
         trainBeforeSplit.fill(0)
-        
+
         self.train = trainBeforeSplit.copy()
         self.valid = trainBeforeSplit.copy()
         self.test = trainBeforeSplit.copy()
@@ -89,22 +87,37 @@ class SVDModel(RecommendSystemModel):
 
         self.n_users = len(self.users_ref)
         self.n_items = len(self.movies_ref)
-        
-    def _process(self,id_user,id_item):
-        predict = self.prediction(id_user, id_item)
-        error = self.train[id_user, id_item] - predict
-        self.optimize(error, id_user, id_item)
-        return error
-            
-    def _run(self,id_user, id_item):
-        error = self._process(id_user, id_item)
-        if self.mode=='svd++':
-            self._bu[id_user] += self.lr * (error - self.weight_decay * self._bu[id_user])
-            self._bi[id_item] += self.lr * (error - self.weight_decay * self._bi[id_item])
-        return error
-        
-    def _train_one_epoches(self):
-        return [self._run(id_user, id_item) for id_user in range(self.n_users) for id_item in range(self.n_items) if self.train[id_user, id_item] > 0]
+
+    # def _process(self, id_user, id_item):
+    #     predict = self.prediction(id_user, id_item)
+    #     error = self.train[id_user, id_item] - predict
+    #     self.optimize(error, id_user, id_item)
+    #     return error
+
+    # def _run(id_user, id_item):
+    #     error = self._process(id_user, id_item)
+    #     if self.mode == "svd++":
+    #         self._bu[id_user] += self.lr * (
+    #             error - self.weight_decay * self._bu[id_user]
+    #         )
+    #         self._bi[id_item] += self.lr * (
+    #             error - self.weight_decay * self._bi[id_item]
+    #         )
+    #     return error
+    def _train_one_epochs(self):
+        return _train(
+            self.n_users,
+            self.n_items,
+            self.train,
+            self._P,
+            self._Q,
+            self.mode,
+            self._mean,
+            self._bu,
+            self._bi,
+            self.lr,
+            self.weight_decay,
+        )
 
     def training(self) -> Tuple[NDArray, NDArray, float, float]:
         loss_train = []
@@ -113,23 +126,25 @@ class SVDModel(RecommendSystemModel):
 
         self._P = np.random.rand(self.n_users, self.features) * 0.1
         self._Q = np.random.rand(self.n_items, self.features) * 0.1
-           
-        if self.mode=='svd++':
+        self._bu = np.zeros(self.n_users)
+        self._bi = np.zeros(self.n_items)
+        self._mean = 0
+        if self.mode == "svd++":
             # for advanced SVD
             self._bu = np.zeros(self.n_users)
             self._bi = np.zeros(self.n_items)
-            self._mean = np.mean(self.data['rating'])  # TODO calculate the mean of rating
+            self._mean = np.mean(self.data["rating"])
         # Johnny
         tic = time.perf_counter()
         for e in range(self.epochs):
-            _errors = self._train_one_epoches()
-            errors += _errors
-            
+            error = self._train_one_epochs()
+            errors.append(error)
+
             trainLoss = self.loss(self.train)
             validLoss = self.loss(self.valid)
             loss_train.append(trainLoss)
             loss_valid.append(validLoss)
-            
+
             if e % 10 == 0:
                 toc = time.perf_counter()
                 print(
@@ -139,7 +154,8 @@ class SVDModel(RecommendSystemModel):
                     "{:3.3f}".format(trainLoss),
                     " | Valid :",
                     "{:3.3f}".format(validLoss),
-                    " | Time :", "{:3.5f}s".format(toc-tic)
+                    " | Time :",
+                    "{:3.5f}s".format(toc - tic),
                 )
                 tic = time.perf_counter()
 
@@ -166,22 +182,68 @@ class SVDModel(RecommendSystemModel):
 
     def loss(self, groundTruthData) -> float:
         # Woody
-        squaredErrors = 0.0
-        numOfPrediction = 0
-        for u in range(self.n_users):
-            for i in range(self.n_items):
-                if groundTruthData[u, i] > 0:
-                    squaredErrors += pow(
-                        groundTruthData[u, i] - self.prediction(u, i), 2
-                    )
-                    numOfPrediction += 1
-        return 0 if numOfPrediction==0 else squaredErrors / numOfPrediction
+        # squaredErrors = 0.0
+        # numOfPrediction = 0
+        # for u in range(self.n_users):
+        #     for i in range(self.n_items):
+        #         if groundTruthData[u, i] > 0:
+        #             squaredErrors += pow(
+        #                 groundTruthData[u, i] - self.prediction(u, i), 2
+        #             )
+        #             numOfPrediction += 1
+        # return 0 if numOfPrediction == 0 else squaredErrors / numOfPrediction
+        return _loss(groundTruthData, self.n_users, self.n_items, self.mode, self._P,self._Q, self._mean, self._bu, self._bi,self.train)
 
-    def optimize(self, error: float, id_user: int, id_item: int):
-        # Johnny
-        self._P[id_user, :] += self.lr * (
-            error * self._Q[id_item, :] - self.weight_decay * self._P[id_user, :]
-        )
-        self._Q[id_item, :] += self.lr * (
-            error * self._P[id_user, :] - self.weight_decay * self._Q[id_item, :]
-        )
+    # def optimize(self, error: float, id_user: int, id_item: int):
+    #     # Johnny
+    #     self._P[id_user, :] += self.lr * (
+    #         error * self._Q[id_item, :] - self.weight_decay * self._P[id_user, :]
+    #     )
+    #     self._Q[id_item, :] += self.lr * (
+    #         error * self._P[id_user, :] - self.weight_decay * self._Q[id_item, :]
+    #     )
+
+
+@njit(parallel=True, fastmath=True)
+def _train(n_users, n_items, train, _P, _Q, mode, _mean, _bu, _bi, lr, weight_decay):
+    error = 0
+    for id_user in prange(n_users):
+        for id_item in prange(n_items):
+            if train[id_user, id_item] > 0:
+                # predict = np.dot(_P[u, :], _Q[i, :])
+                predict = np.dot(_P[id_user, :], _Q[id_item, :])
+                if mode == "svd++":
+                    predict += _mean + _bu[id_user] + _bi[id_item]
+
+                error = train[id_user, id_item] - predict
+
+                if mode == "svd++":
+                    _bu[id_user] += lr * (error - weight_decay * _bu[id_user])
+                    _bi[id_item] += lr * (error - weight_decay * _bi[id_item])
+
+                _P[id_user, :] += lr * (
+                    error * _Q[id_item, :] - weight_decay * _P[id_user, :]
+                )
+                _Q[id_item, :] += lr * (
+                    error * _P[id_user, :] - weight_decay * _Q[id_item, :]
+                )
+
+    return error
+
+
+# Woody
+@njit(parallel=True, fastmath=True)
+def _loss(groundTruthData, n_users, n_items,mode,_P,_Q,_mean,_bu,_bi,train,):
+    squaredErrors = 0.0
+    numOfPrediction = 0
+    for u in prange(n_users):
+        for i in prange(n_items):
+            if groundTruthData[u, i] > 0:
+                predict = np.dot(_P[u, :], _Q[i, :])
+                if mode == "svd++":
+                    predict += _mean + _bu[u] + _bi[i]
+
+                error = train[u, i] - predict
+                squaredErrors += pow(groundTruthData[u, i] - predict, 2)
+                numOfPrediction += 1
+    return 0 if numOfPrediction == 0 else squaredErrors / numOfPrediction
