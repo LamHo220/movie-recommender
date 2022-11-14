@@ -155,43 +155,26 @@ class SVDModel(RecommendSystemModel):
 
     def prediction(self, u: int, i: int) -> float:
         # Woody
-        return _prediction(
-            self.id_user,
-            self.id_item,
-            self._P,
-            self._Q,
-            self.mode,
-            self._mean,
-            self._bu,
-            self._bi,
-        )
+        predict = np.dot(self._P[u, :], self._Q[i, :])
+        if self.mode == "svd++":
+            predict += self._mean + self._bu[u] + self._bi[i]
+        return predict
 
     def loss(self, groundTruthData) -> float:
         # Woody
-        return _loss(
-            groundTruthData,
-            self.n_users,
-            self.n_items,
-            self.mode,
-            self._P,
-            self._Q,
-            self._mean,
-            self._bu,
-            self._bi,
-            self.train,
-        )
+        return _loss(groundTruthData, self.n_users, self.n_items, self.mode, self._P,self._Q, self._mean, self._bu, self._bi,self.train)
 
 
 @njit(parallel=True, fastmath=True)
-def _train_one_epoch(
-    n_users, n_items, train, _P, _Q, mode, _mean, _bu, _bi, lr, weight_decay
-):
+def _train_one_epoch(n_users, n_items, train, _P, _Q, mode, _mean, _bu, _bi, lr, weight_decay):
     error = 0
     for id_user in prange(n_users):
         for id_item in prange(n_items):
             if train[id_user, id_item] > 0:
                 # Predict
-                predict = _prediction(id_user, id_item, _P, _Q, mode, _mean, _bu, _bi)
+                predict = np.dot(_P[id_user, :], _Q[id_item, :])
+                if mode == "svd++":
+                    predict += _mean + _bu[id_user] + _bi[id_item]
 
                 error = train[id_user, id_item] - predict
 
@@ -211,18 +194,7 @@ def _train_one_epoch(
 
 # Woody
 @njit(parallel=True, fastmath=True)
-def _loss(
-    groundTruthData,
-    n_users,
-    n_items,
-    mode,
-    _P,
-    _Q,
-    _mean,
-    _bu,
-    _bi,
-    train,
-):
+def _loss(groundTruthData, n_users, n_items,mode,_P,_Q,_mean,_bu,_bi,train,):
     squaredErrors = 0.0
     numOfPrediction = 0
     for u in prange(n_users):
@@ -234,14 +206,3 @@ def _loss(
                 squaredErrors += pow(groundTruthData[u, i] - predict, 2)
                 numOfPrediction += 1
     return 0 if numOfPrediction == 0 else squaredErrors / numOfPrediction
-
-
-@njit(parallel=True, fastmath=True)
-def _prediction(u: int, i: int, _P, _Q, mode, _mean, _bu, _bi):
-    # Woody
-    predict = 0
-    for f in prange(len(_P[0])):
-        predict += _P[u, f]* _Q[i, f]
-    if mode == "svd++":
-        predict += _mean + _bu[u] + _bi[i]
-    return predict
