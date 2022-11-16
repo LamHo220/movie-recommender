@@ -24,38 +24,22 @@ class SVDModel(RecommendSystemModel):
         momentum: float = None,
     ) -> None:
         super().__init__(mode, features, lr, epochs, weight_decay, stopping, momentum)
-
+    
     def split(
-        self, ratio_train_test: float, ratio_train_valid: float, tensor: bool = False
+        self, ratio_train_test: float, ratio_train_valid: float
     ) -> None:
         userItemMatrix = (
             self.data[["userId", "movieId", "rating"]]
             .pivot_table(columns="movieId", index="userId", values="rating")
             .fillna(0)
         )
-
         userItemMatrix = userItemMatrix.to_numpy()
-        print(f"User Item Matrix Shape: {userItemMatrix.shape}")
-        print(f"User Reference length: {self.n_users}")
-        print(f"Item Reference length: {self.n_items}")
 
-        trainBeforeSplit = userItemMatrix.copy()
-        trainBeforeSplit.fill(0)
+        print(f"User Item Matrix Shape: userItemMatrix.shape")
+        print(f"User Reference length: self.n_users")
+        print(f"Item Reference length: self.n_items")
 
-        self.train = trainBeforeSplit.copy()
-        self.valid = trainBeforeSplit.copy()
-        self.test = trainBeforeSplit.copy()
-
-        for i in range(self.n_users):
-            for j in range(self.n_items):
-                if userItemMatrix[i, j]:
-                    if np.random.binomial(1, ratio_train_test, 1):
-                        if np.random.binomial(1, ratio_train_valid, 1):
-                            self.train[i, j] = userItemMatrix[i, j]
-                        else:
-                            self.valid[i, j] = userItemMatrix[i, j]
-                    else:
-                        self.test[i, j] = userItemMatrix[i, j]
+        self.train, self.valid, self.test =  _split(ratio_train_test, ratio_train_valid, userItemMatrix, self.n_users, self.n_items)
 
     def data_loader(
         self,
@@ -139,19 +123,23 @@ class SVDModel(RecommendSystemModel):
                 )
                 tic = time.perf_counter()
 
-            if e > 1:
-                if abs(validLoss - trainLoss) < self.stopping:
+            if e > 2:
+                if abs(validLoss - loss_valid[-2]) < self.stopping:
                     break
         print("Training stopped:")
+        testLoss = self.loss(self.test)
         print(
             "Epoch : ",
             "{:3.0f}".format(e + 1),
-            " | Train :",
+            " | Train Loss :",
             "{:3.3f}".format(trainLoss),
-            " | Valid :",
+            " | Valid Loss:",
             "{:3.3f}".format(validLoss),
+            " | Test Loss:",
+            "{:3.3f}".format(testLoss),
         )
-        return loss_train, loss_valid, errors
+
+        return loss_train, loss_valid, testLoss, errors
 
     def prediction(self, u: int, i: int) -> float:
         # Woody
@@ -206,3 +194,27 @@ def _loss(groundTruthData, n_users, n_items,mode,_P,_Q,_mean,_bu,_bi,train,):
                 squaredErrors += pow(groundTruthData[u, i] - predict, 2)
                 numOfPrediction += 1
     return 0 if numOfPrediction == 0 else squaredErrors / numOfPrediction
+
+@njit(parallel=True, fastmath=True)
+def _split(
+    ratio_train_test: float, ratio_train_valid: float, userItemMatrix, n_users, n_items):
+
+    trainBeforeSplit = userItemMatrix.copy()
+    trainBeforeSplit.fill(0)
+
+    train = trainBeforeSplit.copy()
+    valid = trainBeforeSplit.copy()
+    test = trainBeforeSplit.copy()
+
+    for i in prange(n_users):
+        for j in prange(n_items):
+            if userItemMatrix[i, j]:
+                if np.random.binomial(1, ratio_train_test, 1):
+                    if np.random.binomial(1, ratio_train_valid, 1):
+                        train[i, j] = userItemMatrix[i, j]
+                    else:
+                        valid[i, j] = userItemMatrix[i, j]
+                else:
+                    test[i, j] = userItemMatrix[i, j]
+    
+    return train, valid, test
