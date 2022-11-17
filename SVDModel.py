@@ -35,9 +35,9 @@ class SVDModel(RecommendSystemModel):
         )
         userItemMatrix = userItemMatrix.to_numpy()
 
-        print(f"User Item Matrix Shape: userItemMatrix.shape")
-        print(f"User Reference length: self.n_users")
-        print(f"Item Reference length: self.n_items")
+        print(f"User Item Matrix Shape: {userItemMatrix.shape}")
+        print(f"User Reference length: {self.n_users}")
+        print(f"Item Reference length: {self.n_items}")
 
         self.train, self.valid, self.test =  _split(ratio_train_test, ratio_train_valid, userItemMatrix, self.n_users, self.n_items)
 
