@@ -218,3 +218,24 @@ def _split(
                     test[i, j] = userItemMatrix[i, j]
     
     return train, valid, test
+
+def movieRatePredictionByUserIdMovieId(userId, movieId, model):
+    if movieId not in model.movies_ref:
+        return f"The model does not contain this movieID({movieId})"
+    if userId not in model.users_ref:
+        return f"The model does not contain this userId({userId})"
+    
+    p_id = np.where(model.users_ref == userId)[0].item()
+    q_id = np.where(model.movies_ref == movieId)[0].item()
+    return model.prediction(p_id, q_id)
+
+def topKPrediction(userId, k, model):
+    if userId not in model.users_ref:
+        return f"The model does not contain this userId({userId})"
+        
+    predictedRate = []
+    for movieId in model.movies_ref:
+        predictedRate.append((movieId, movieRatePredictionByUserIdMovieId(userId, movieId, model)))
+
+    predictedRate.sort(key=lambda element: element[1], reverse=True)
+    return predictedRate[:k]
