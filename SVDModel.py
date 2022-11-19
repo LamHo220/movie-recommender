@@ -9,7 +9,7 @@ import numpy as np
 
 import time
 
-from numba import njit, prange
+from numba import njit, prange, typed, types
 
 # The ML model
 class SVDModel(RecommendSystemModel):
@@ -143,6 +143,7 @@ class SVDModel(RecommendSystemModel):
 
     def prediction(self, u: int, i: int) -> float:
         # Woody
+        return _prediction(u, i, self._P, self._Q, self._mean, self._bu, self._bi, self.mode)
         predict = np.dot(self._P[u, :], self._Q[i, :])
         if self.mode == "svd++":
             predict += self._mean + self._bu[u] + self._bi[i]
@@ -196,6 +197,14 @@ def _loss(groundTruthData, n_users, n_items,mode,_P,_Q,_mean,_bu,_bi,train,):
     return 0 if numOfPrediction == 0 else squaredErrors / numOfPrediction
 
 @njit(parallel=True, fastmath=True)
+def _prediction( u: int, i: int, _P, _Q, _mean, _bu, _bi, mode):
+    # Woody
+    predict = np.dot(_P[u, :], _Q[i, :])
+    if mode == "svd++":
+        predict += _mean + _bu[u] + _bi[i]
+    return predict
+
+@njit(parallel=True, fastmath=True)
 def _split(
     ratio_train_test: float, ratio_train_valid: float, userItemMatrix, n_users, n_items):
 
@@ -239,3 +248,50 @@ def topKPrediction(userId, k, model):
 
     predictedRate.sort(key=lambda element: element[1], reverse=True)
     return predictedRate[:k]
+
+@njit(fastmath=True)#(parallel=True, fastmath=True)
+def makePrediction( n_users, n_items, test, users_ref, movies_ref, mode, _P, _Q, _mean, _bu, _bi):
+    userIds = typed.List.empty_list(types.int64)
+    movieIds = typed.List.empty_list(types.int64)
+    actuals = typed.List.empty_list(types.float64)
+    predictions = typed.List.empty_list(types.float64)
+    for i in prange(n_users):
+        for j in prange(n_items):
+            if not test[i,j] == 0:
+                userId = users_ref[i]
+                movieId = movies_ref[j]
+                prediction = np.dot(_P[i, :], _Q[j, :])
+                if mode == "svd++":
+                    prediction += _mean + _bu[i] + _bi[j]
+                # prediction = movieRatePredictionByUserIdMovieId(userId=userId,movieId=movieId,model=svd)
+                # prediction = prediction(i,j)
+                userIds.append(userId)
+                movieIds.append(movieId)
+                actuals.append(test[i,j])
+                predictions.append(prediction)
+    return userIds, movieIds, actuals, predictions
+
+@njit(fastmath=True)#(parallel=True, fastmath=True)
+def findThreshold(df, threshold):
+    true_positive = 0
+    true_negative = 0
+    false_positive = 0
+    false_negative = 0
+    precision = 0
+    recall = 0
+    for i in prange(len(df)):
+        _,_,actual,prediction = df[i]
+        if actual >= threshold:
+            if prediction >= threshold:
+                true_positive+=1
+            else:
+                false_negative+=1
+        else:
+            if prediction >= threshold:
+                false_positive+=1
+            else:
+                true_negative+=1
+    precision = true_positive / (true_positive + false_positive) if true_positive + false_positive!=0 else 0
+    recall = true_positive / (true_positive + false_negative) if true_positive + false_negative!=0 else 0
+    f1 = (2 * precision*recall ) / (precision + recall)
+    return precision, recall, f1
