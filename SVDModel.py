@@ -47,8 +47,6 @@ class SVDModel(RecommendSystemModel):
         nrows: int = None,
         skiprows=None,
         data: pd.DataFrame = None,
-        n_users: int = None,
-        n_items=None,
     ) -> None:
         if not path and data.empty:
             raise "Error: one of path or data frame should be provided"
@@ -144,10 +142,7 @@ class SVDModel(RecommendSystemModel):
     def prediction(self, u: int, i: int) -> float:
         # Woody
         return _prediction(u, i, self._P, self._Q, self._mean, self._bu, self._bi, self.mode)
-        predict = np.dot(self._P[u, :], self._Q[i, :])
-        if self.mode == "svd++":
-            predict += self._mean + self._bu[u] + self._bi[i]
-        return predict
+
 
     def loss(self, groundTruthData) -> float:
         # Woody
