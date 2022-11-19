@@ -258,8 +258,6 @@ def makePrediction( n_users, n_items, test, users_ref, movies_ref, mode, _P, _Q,
                 prediction = np.dot(_P[i, :], _Q[j, :])
                 if mode == "svd++":
                     prediction += _mean + _bu[i] + _bi[j]
-                # prediction = movieRatePredictionByUserIdMovieId(userId=userId,movieId=movieId,model=svd)
-                # prediction = prediction(i,j)
                 userIds.append(userId)
                 movieIds.append(movieId)
                 actuals.append(test[i,j])
