@@ -1,12 +1,12 @@
 # movie-recommender
 
 ## Environment (version can be found at the end)
-> python3.7
-> numba
-> numpy 
-> seaborn
-> matplotlib
-> pandas
+> - python3.7
+> - numba
+> - numpy 
+> - seaborn
+> - matplotlib
+> - pandas
 
 # Environment List
 ```
