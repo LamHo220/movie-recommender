@@ -39,14 +39,6 @@ class RecommendSystemModel(ABC):
         self.weight_decay: float = weight_decay or 0.02
         self.stopping: float = stopping or 0.001
         self.momentum: float = momentum or 0.0
-        # Tensor SGD optimizer
-        # self.optimizer = tf.keras.optimizers.SGD(learning_rate=self.lr, momentum=self.momentum,)
-
-
-        # User latent matrix
-        self._P: NDArray  # = np.random.rand(self.n_users, features) * 0.1
-        # Item latent matrix
-        self._Q: NDArray  # = np.random.rand(self.n_items, features) * 0.1
         pass
     
     # @abstractmethod
