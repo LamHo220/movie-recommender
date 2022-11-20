@@ -9,6 +9,7 @@
 > pandas
 
 # Environment List
+```
 Name                    Version                   Build  Channel
 absl-py                   1.3.0                    pypi_0    pypi
 argon2-cffi               21.3.0             pyhd3eb1b0_0
@@ -178,3 +179,4 @@ zeromq                    4.3.4                hd77b12b_0
 zipp                      3.8.0            py37haa95532_0
 zlib                      1.2.13               h8cc25b3_0
 zstd                      1.5.2                h19a0ad4_0
+```
