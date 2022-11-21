@@ -1,12 +1,19 @@
 # movie-recommender
 
-## Environment (version can be found at the end)
+# Conda Environment (versions can be found at the end)
 > - python3.7
 > - numba
 > - numpy 
 > - seaborn
 > - matplotlib
 > - pandas
+
+# Datasets
+## MovieLens 25M
+The dataset of MovieLens 25M can be downloaded by running the cell in `DataExploration/MovieLens25M.ipynb`
+
+## Netflix Prize Data
+The dataset of Netflix Prize Data can be downloaded by this [link](https://www.kaggle.com/datasets/netflix-inc/netflix-prize-data).
 
 # Environment List
 ```
