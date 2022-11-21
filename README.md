@@ -10,7 +10,7 @@
 
 # Datasets
 ## MovieLens 25M
-The dataset of MovieLens 25M can be downloaded by running the cell in `DataExploration/MovieLens25M.ipynb`
+The dataset of MovieLens 25M can be downloaded by running the cell in `DataExploration/MovieLens25M.ipynb`, or can be downloaded by this [link](https://grouplens.org/datasets/movielens/).
 
 ## Netflix Prize Data
 The dataset of Netflix Prize Data can be downloaded by this [link](https://www.kaggle.com/datasets/netflix-inc/netflix-prize-data).
